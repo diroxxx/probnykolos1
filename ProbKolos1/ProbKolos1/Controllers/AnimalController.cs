@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+﻿using System.Transactions;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using ProbKolos1.DTOs;
 using ProbKolos1.Repositories;
@@ -33,7 +34,37 @@ public class AnimalController: ControllerBase
 
     }
 
-    
-    
+    [HttpPost]
+    [Route("api/animals")]
+    public async Task<IActionResult> AddAnimal(AddAnimal animal)
+    {
+        if (! await _animalRepository.DoesOwnerExist(animal.OwnerId))
+        {
+            return NotFound("Given Owner doesn't exist");
+        }
+
+        for (int i = 0; i < animal.Procedures.Count; i++)
+        {
+            if (! await _animalRepository.DoesProcedureExist(animal.Procedures[i].ProcedureId))
+            {
+                return NotFound("Given procedure doesn't exist");
+            }
+        }
+
+        using (TransactionScope scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+        {
+           await _animalRepository.AddAnimal(animal); 
+           
+           scope.Complete();
+        }
+        
+        
+
+        
+
+        return Created(Request.Path.Value ?? "api/animals", animal);
+        
+    }
+
     
 }

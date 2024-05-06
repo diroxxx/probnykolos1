@@ -106,4 +106,64 @@ public class AnimalRepository: IAnimalRepository
 
         return animal;
     }
+
+    public async Task<bool> DoesOwnerExist(int id)
+    {
+        using SqlConnection connection = new SqlConnection(_configuration.GetConnectionString("Default"));
+        using SqlCommand command = new SqlCommand();
+        command.Connection = connection;
+
+        command.CommandText = "Select 1 from Owner where Owner.id = @id";
+        command.Parameters.AddWithValue("@id", id);
+        
+        await connection.OpenAsync();
+
+        var res = await command.ExecuteScalarAsync();
+
+        return res is not null;   }
+
+    public async Task<bool> DoesProcedureExist(int id)
+    {
+        using SqlConnection connection = new SqlConnection(_configuration.GetConnectionString("Default"));
+        using SqlCommand command = new SqlCommand();
+        command.Connection = connection;
+
+        command.CommandText = "Select 1 from [Procedure] where [Procedure].id = @id";
+        command.Parameters.AddWithValue("@id", id);
+        
+        await connection.OpenAsync();
+
+        var res = await command.ExecuteScalarAsync();
+
+        return res is not null;
+    }
+    
+    public async Task AddAnimal(AddAnimal animal)
+    {
+       await using SqlConnection connection = new SqlConnection(_configuration.GetConnectionString("Default"));
+      await  using SqlCommand command = new SqlCommand();
+        command.Connection = connection;
+        
+        command.CommandText = "insert into Animal values (@name, @type, @admissionDate, @Owner_id);SELECT @@IDENTITY as ID";
+        command.Parameters.AddWithValue("@name", animal.Name);
+        command.Parameters.AddWithValue("@type", animal.Type);
+        command.Parameters.AddWithValue("@admissionDate", animal.AdmissionDate);
+        command.Parameters.AddWithValue("@Owner_id", animal.OwnerId);
+        
+        await connection.OpenAsync();
+
+        int indexOfAnimal = Convert.ToInt32(await command.ExecuteScalarAsync());
+
+
+        for (int i = 0; i < animal.Procedures.Count; i++)
+        {
+             command.Parameters.Clear();
+             command.CommandText = "insert into [Procedure] values(@procedureId, @animalId, @date); ";
+             command.Parameters.AddWithValue("@procedureId", animal.Procedures[i].ProcedureId);
+             command.Parameters.AddWithValue("@animalId", indexOfAnimal);
+             command.Parameters.AddWithValue("@date", animal.Procedures[i].date);
+             await command.ExecuteNonQueryAsync();
+        }
+        
+    }
 }
